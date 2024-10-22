@@ -35,6 +35,10 @@ int hourPotPin = 31;
 int minPotPin = 32;
 int hourPot = 512;
 int minPot = 512;
+boolean ignoreHourPot = false;
+boolean ignoreMinPot = false;
+
+const int MARGIN = 32;
 
 // hand speed
 float hourSpeed = 0;
@@ -183,8 +187,10 @@ void loop() {
 
   if (button2 == LOW) {
     Serial.println("Move hours to 6, move minutes to 2");
-    
+
     // Ignore potentiometers until they get back to 0
+    ignoreHourPot = true;
+    ignoreMinPot = true;
   }
 
   if (button1 == LOW) {
@@ -199,22 +205,20 @@ void loop() {
     Serial.println(timeinfo.tm_min);
 
     // Ignore potentiometers until they get back to 0
+    ignoreHourPot = true;
+    ignoreMinPot = true;
   }
 
 
   // Control direction and speed
-  if (hourPot < 500) {
-    float speed = (512 - hourPot) * MAX_SPEED / 512;
-    //   // setMaxSpeed((512 - hourPot) * MAX_SPEED / 512);
-    //   // move(-100);
-    //   // runSpeed();
-    if (speed != hourSpeed) {
-      hourSpeed = speed;
-      Serial.print("Run hours hand at - ");
-      Serial.println(hourSpeed);
+  if (hourPot > 512 - MARGIN && hourPot < 512 + MARGIN) {
+    if (hourSpeed != 0) {
+      hourSpeed = 0;
+      Serial.print("Stop hours hand");
     }
-  }
-  if (hourPot > 520) {
+    hourSpeed = 0;
+    ignoreHourPot = false;
+  } else if (!ignoreHourPot) {
     float speed = (hourPot - 512) * MAX_SPEED / 512;
     //   // setMaxSpeed((512 - hourPot) * MAX_SPEED / 512);
     //   // move(-100);
@@ -227,18 +231,14 @@ void loop() {
   }
 
   // Control direction and speed
-  if (minPot < 500) {
-    float speed = (512 - minPot) * MAX_SPEED / 512;
-    //   // setMaxSpeed((512 - hourPot) * MAX_SPEED / 512);
-    //   // move(-100);
-    //   // runSpeed();
-    if (speed != minSpeed) {
-      minSpeed = speed;
-      Serial.print("Run minutes hand at - ");
-      Serial.println(minSpeed);
+  if (minPot > 512 - MARGIN && minPot < 512 + MARGIN) {
+    if (minSpeed != 0) {
+      minSpeed = 0;
+      Serial.print("Stop minutes hand");
     }
-  }
-  if (minPot > 520) {
+    minSpeed = 0;
+    ignoreMinPot = false;
+  } else if (!ignoreMinPot) {
     float speed = (minPot - 512) * MAX_SPEED / 512;
     //   // setMaxSpeed((512 - hourPot) * MAX_SPEED / 512);
     //   // move(-100);
