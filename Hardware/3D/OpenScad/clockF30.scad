@@ -63,10 +63,10 @@ module engine_axle_plug() {
 }
 
 
-support = false;
-gear1 = false;
+support = true;
+gear1 = true;
 gear2 = true;
-axle = false;
+axle = true;
 
 show_engine_axle = false;
  
