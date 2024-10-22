@@ -1,4 +1,4 @@
-include <lib/gear-lib.scad>
+include <gear-lib.scad>
 
 thickness = 2;
 
