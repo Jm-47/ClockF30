@@ -40,6 +40,9 @@ boolean ignoreMinPot = false;
 
 const int MARGIN = 32;
 
+int hourPosition = 0;
+int minPosition = 0;
+
 // hand speed
 float hourSpeed = 0;
 float minSpeed = 0;
@@ -111,28 +114,23 @@ void loop() {
   // serial bypass
   if (Serial.available() > 0) {
     int thisChar = Serial.read();
-    Serial.print("Command ");
-    Serial.println(thisChar);
+    // Serial.print("Command ");
+    // Serial.println(thisChar);
 
     switch (thisChar) {
       case 49:  //1
-        Serial.println("HourPot 0");
         hourPot = 0;
         break;
       case 50:  //2
-        Serial.println("HourPot 256");
         hourPot = 256;
         break;
       case 51:  //3
-        Serial.println("HourPot 512");
         hourPot = 512;
         break;
       case 52:  //4
-        Serial.println("HourPot 768");
         hourPot = 768;
         break;
       case 53:  //5
-        Serial.println("HourPot 1024");
         hourPot = 1024;
         break;
 
@@ -153,29 +151,23 @@ void loop() {
         break;
 
       case 113:  //q
-        Serial.println("B1 low");
         button1 = LOW;
         break;
       case 119:  //w
-        Serial.println("B1 high");
         button1 = HIGH;
         break;
 
       case 97:  //a
-        Serial.println("B2 low");
         button2 = LOW;
         break;
       case 115:  //s
-        Serial.println("B2 high");
         button2 = HIGH;
         break;
 
       case 122:  //z
-        Serial.println("B3 low");
         button3 = LOW;
         break;
       case 120:  //x
-        Serial.println("B3 high");
         button3 = HIGH;
         break;
     }
@@ -186,7 +178,19 @@ void loop() {
 
 
   if (button2 == LOW) {
-    Serial.println("Move hours to 6, move minutes to 2");
+    if (hourPosition != 6) {
+      Serial.println("Move hours to 6");
+      hourPosition = 6;
+    }
+    if (minPosition != 2) {
+      Serial.println("Move minutes to 2");
+      minPosition = 2;
+    }
+
+    // stepper1.setMaxSpeed(MAX_SPEED);
+    // stepper1.setAcceleration(ACCELERATION);
+    // stepper1.setSpeed(2000);
+    // stepper1.moveTo(endPoint1);
 
     // Ignore potentiometers until they get back to 0
     ignoreHourPot = true;
@@ -194,15 +198,23 @@ void loop() {
   }
 
   if (button1 == LOW) {
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
+    struct tm time_info;
+    if (!getLocalTime(&time_info)) {
       Serial.println("Failed to obtain time");
       return;
     }
-    Serial.print("Move hours to ");
-    Serial.println(timeinfo.tm_hour % 12);
-    Serial.print("Move minutes to ");
-    Serial.println(timeinfo.tm_min);
+
+    if (hourPosition != time_info.tm_hour % 12) {
+      Serial.print("Move hours to ");
+      Serial.println(time_info.tm_hour % 12);
+      hourPosition = time_info.tm_hour % 12;
+    }
+
+    if (minPosition != time_info.tm_min) {
+      Serial.print("Move minutes to ");
+      Serial.println(time_info.tm_min);
+      minPosition = time_info.tm_min;
+    }
 
     // Ignore potentiometers until they get back to 0
     ignoreHourPot = true;
