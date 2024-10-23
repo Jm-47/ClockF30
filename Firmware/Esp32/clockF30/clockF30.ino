@@ -199,20 +199,10 @@ void loop() {
   }
 
   if (button2 == LOW) {
-    if (hourStepper.distanceToGo() != 0) {
-      Serial.println("Move hours to 6");
-      hourStepper.moveTo(4096*6/12);
-    }
-    if (minStepper.distanceToGo() != 0) {
-      Serial.println("Move minutes to 2");
-      minStepper.moveTo(4096*2/60);
-    }
-    // Ignore potentiometers until they get back to 0
+    moveHandToPosition(&hourStepper, 4096 * 6 / 12);
+    moveHandToPosition(&minStepper, 4096 * 2 / 60);
     ignoreHourPot = true;
     ignoreMinPot = true;
-
-    hourStepper.run();
-    minStepper.run();
     return;
   }
 
@@ -223,35 +213,10 @@ void loop() {
       return;
     }
 
-    if (hourStepper.distanceToGo() == 0) {
-
-      hours = time_info.tm_hour % 12;
-      int destination = 4096 * hours / 12;
-      if (hourStepper.currentPosition() != destination) {
-        Serial.print("Move hours to ");
-        Serial.print(hours);
-        Serial.print(" - ");
-        Serial.println(destination);
-        hourStepper.moveTo(destination);
-        ignoreHourPot = true; // Ignore potentiometer until it is reset
-      }
-      hourStepper.run();
-    }
-
-    if (minStepper.distanceToGo() == 0) {
-      minutes = time_info.tm_sec; // FIXME minutes, not seconds
-      int destination = 4096 * minutes / 60;
-      if (minStepper.currentPosition() != destination) {
-        Serial.print("Move minutes to ");
-        Serial.print(minutes);
-        Serial.print(" - ");
-        Serial.println(destination);
-        minStepper.moveTo(destination);
-        ignoreMinPot = true; // Ignore potentiometer until it is reset
-      }
-      minStepper.run();
-    }
-
+    moveHandToPosition(&hourStepper, 4096 * (time_info.tm_hour % 12) / 12);
+    moveHandToPosition(&minStepper, 4096 * time_info.tm_sec / 60);
+    ignoreHourPot = true;
+    ignoreMinPot = true;
     return;
   }
 
@@ -311,25 +276,24 @@ void loop() {
       Serial.println(minSpeed);
     }
   }
+}
 
-  // // //Change direction at the limits
-  // if (hourStepper.distanceToGo() == 0) {
-  //   Serial.println(hourStepper.currentPosition());
-  //   hourStepper.setCurrentPosition(0);
-  //   endPoint1 = -endPoint1;
-  //   hourStepper.moveTo(endPoint1);
-  //   Serial.println(hourStepper.currentPosition());
-  // }
+void moveHandToPosition(AccelStepper *stepper, int destination) {
+    if (stepper->distanceToGo() == 0) {
 
-  // if (minStepper.distanceToGo() == 0) {
-  //   Serial.println(hourStepper.currentPosition());
-  //   minStepper.setCurrentPosition(0);
-  //   endPoint2 = -endPoint2;
-  //   minStepper.moveTo(endPoint2);
-  //   Serial.println(minStepper.currentPosition());
-  // }
-  // hourStepper.run();
-  // minStepper.run();
+      int currentPosition = stepper->currentPosition() % 4096;
 
-  // sleep(1000);
+      if (currentPosition != destination) {
+
+        if (destination - currentPosition > 2048) {
+          stepper->setCurrentPosition(currentPosition + 4096);
+        }
+        else if (destination - currentPosition < -2047) {
+          stepper->setCurrentPosition(currentPosition - 4096);
+        }
+
+        stepper->moveTo(destination);
+      }
+    }
+    stepper->run();
 }
