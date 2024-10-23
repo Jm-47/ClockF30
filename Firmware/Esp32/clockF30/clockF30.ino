@@ -12,7 +12,7 @@ const char* ntpServer = "europe.pool.ntp.org";
 const long gmtOffset_sec = 3600;
 const int daylightOffset_sec = 3600;
 
-const float MAX_SPEED = 3000.0;
+const float MAX_SPEED = 1000.0;
 const float ACCELERATION = 1000.0;
 
 
@@ -40,8 +40,8 @@ boolean ignoreMinPot = false;
 
 const int MARGIN = 32;
 
-int hourPosition = 0;
-int minPosition = 0;
+int hours = 0;
+int minutes = 0;
 
 // hand speed
 float hourSpeed = 0;
@@ -60,8 +60,8 @@ int button2 = HIGH;
 int button3 = HIGH;
 
 // NOTE: The sequence 1-3-2-4 is required for proper sequencing of 28BYJ-48
-AccelStepper stepper1(AccelStepper::HALF4WIRE, motorPin11, motorPin13, motorPin12, motorPin14);
-AccelStepper stepper2(AccelStepper::HALF4WIRE, motorPin21, motorPin23, motorPin22, motorPin24);
+AccelStepper hourStepper(AccelStepper::HALF4WIRE, motorPin11, motorPin13, motorPin12, motorPin14);
+AccelStepper minStepper(AccelStepper::HALF4WIRE, motorPin21, motorPin23, motorPin22, motorPin24);
 
 void setup() {
   Serial.begin(9600);
@@ -87,19 +87,19 @@ void setup() {
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
 
-  // Serial.println(stepper1.currentPosition());
-  // Serial.println(stepper2.currentPosition());
+  // Serial.println(hourStepper.currentPosition());
+  // Serial.println(minStepper.currentPosition());
   // delay(100);
 
-  stepper1.setMaxSpeed(MAX_SPEED);
-  stepper1.setAcceleration(ACCELERATION);
-  stepper1.setSpeed(2000);
-  stepper1.moveTo(endPoint1);
+  hourStepper.setMaxSpeed(MAX_SPEED);
+  hourStepper.setAcceleration(ACCELERATION);
+  hourStepper.setSpeed(1000);
+  hourStepper.moveTo(endPoint1);
 
-  stepper2.setMaxSpeed(MAX_SPEED);
-  stepper2.setAcceleration(ACCELERATION);
-  stepper2.setSpeed(2000);
-  stepper2.moveTo(endPoint2);
+  minStepper.setMaxSpeed(MAX_SPEED);
+  minStepper.setAcceleration(ACCELERATION);
+  minStepper.setSpeed(1000);
+  minStepper.moveTo(endPoint2);
 }
 
 void loop() {
@@ -175,26 +175,37 @@ void loop() {
 
 
 
+  if (button3 == LOW) {
+    if (hourStepper.currentPosition() != 0) {
+      Serial.print("Hours current position ");
+      Serial.println(hourStepper.currentPosition() * 12 / 4096);
+    }
+    if (minStepper.currentPosition() != 0) {
+      Serial.print("Minutes current position ");
+      Serial.println(minStepper.currentPosition() * 60 / 4096);
+    }
 
+    hourStepper.setCurrentPosition(0);
+    minStepper.setCurrentPosition(0);
+    return;
+  }
 
   if (button2 == LOW) {
-    if (hourPosition != 6) {
+    if (hourStepper.distanceToGo() != 0) {
       Serial.println("Move hours to 6");
-      hourPosition = 6;
+      hourStepper.moveTo(4096*6/12);
     }
-    if (minPosition != 2) {
+    if (minStepper.distanceToGo() != 0) {
       Serial.println("Move minutes to 2");
-      minPosition = 2;
+      minStepper.moveTo(4096*2/60);
     }
-
-    // stepper1.setMaxSpeed(MAX_SPEED);
-    // stepper1.setAcceleration(ACCELERATION);
-    // stepper1.setSpeed(2000);
-    // stepper1.moveTo(endPoint1);
-
     // Ignore potentiometers until they get back to 0
     ignoreHourPot = true;
     ignoreMinPot = true;
+
+    hourStepper.run();
+    minStepper.run();
+    return;
   }
 
   if (button1 == LOW) {
@@ -204,21 +215,26 @@ void loop() {
       return;
     }
 
-    if (hourPosition != time_info.tm_hour % 12) {
+    //if (hourPosition != time_info.tm_hour % 12) {
+      hours = time_info.tm_hour % 12;
       Serial.print("Move hours to ");
-      Serial.println(time_info.tm_hour % 12);
-      hourPosition = time_info.tm_hour % 12;
-    }
+      Serial.println(hours);
+      hourStepper.moveTo(4096*hours/12);
+    //}
 
-    if (minPosition != time_info.tm_min) {
+    //if (minPosition != time_info.tm_min) {
+      minutes = time_info.tm_min;
       Serial.print("Move minutes to ");
-      Serial.println(time_info.tm_min);
-      minPosition = time_info.tm_min;
-    }
+      Serial.println(minutes);
+      minStepper.moveTo(4096*minutes/60);
+    //}
 
     // Ignore potentiometers until they get back to 0
     ignoreHourPot = true;
     ignoreMinPot = true;
+    hourStepper.run();
+    minStepper.run();
+    return;
   }
 
 
@@ -226,15 +242,20 @@ void loop() {
   if (hourPot > 512 - MARGIN && hourPot < 512 + MARGIN) {
     if (hourSpeed != 0) {
       hourSpeed = 0;
-      Serial.print("Stop hours hand");
+      Serial.println("Stop hours");
     }
     hourSpeed = 0;
     ignoreHourPot = false;
   } else if (!ignoreHourPot) {
     float speed = (hourPot - 512) * MAX_SPEED / 512;
-      stepper1.setMaxSpeed((512 - hourPot) * MAX_SPEED / 512);
-      stepper1.move(-100);
-      stepper1.runSpeed();
+    hourStepper.setSpeed(speed);
+    if (hourPot > 512) {
+      hourStepper.move(100);
+    }
+    else {
+      hourStepper.move(-100);
+    }
+    hourStepper.runSpeed();
     if (speed != hourSpeed) {
       hourSpeed = speed;
       Serial.print("Run hours hand at ");
@@ -246,15 +267,20 @@ void loop() {
   if (minPot > 512 - MARGIN && minPot < 512 + MARGIN) {
     if (minSpeed != 0) {
       minSpeed = 0;
-      Serial.print("Stop minutes hand");
+      Serial.println("Stop minutes");
     }
     minSpeed = 0;
     ignoreMinPot = false;
   } else if (!ignoreMinPot) {
     float speed = (minPot - 512) * MAX_SPEED / 512;
-      stepper2.setMaxSpeed((512 - minPot) * MAX_SPEED / 512);
-      stepper2.move(-100);
-      stepper2.runSpeed();
+      minStepper.setSpeed(speed);
+      if (minPot > 512) {
+        minStepper.move(100);
+      }
+      else {
+        minStepper.move(-100);
+      }
+      minStepper.runSpeed();
     if (speed != minSpeed) {
       minSpeed = speed;
       Serial.print("Run minutes hand at ");
@@ -263,23 +289,23 @@ void loop() {
   }
 
   // // //Change direction at the limits
-  // if (stepper1.distanceToGo() == 0) {
-  //   Serial.println(stepper1.currentPosition());
-  //   stepper1.setCurrentPosition(0);
+  // if (hourStepper.distanceToGo() == 0) {
+  //   Serial.println(hourStepper.currentPosition());
+  //   hourStepper.setCurrentPosition(0);
   //   endPoint1 = -endPoint1;
-  //   stepper1.moveTo(endPoint1);
-  //   Serial.println(stepper1.currentPosition());
+  //   hourStepper.moveTo(endPoint1);
+  //   Serial.println(hourStepper.currentPosition());
   // }
 
-  // if (stepper2.distanceToGo() == 0) {
-  //   Serial.println(stepper1.currentPosition());
-  //   stepper2.setCurrentPosition(0);
+  // if (minStepper.distanceToGo() == 0) {
+  //   Serial.println(hourStepper.currentPosition());
+  //   minStepper.setCurrentPosition(0);
   //   endPoint2 = -endPoint2;
-  //   stepper2.moveTo(endPoint2);
-  //   Serial.println(stepper2.currentPosition());
+  //   minStepper.moveTo(endPoint2);
+  //   Serial.println(minStepper.currentPosition());
   // }
-  // stepper1.run();
-  // stepper2.run();
+  // hourStepper.run();
+  // minStepper.run();
 
   // sleep(1000);
 }
