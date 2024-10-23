@@ -91,15 +91,15 @@ void setup() {
   // Serial.println(stepper2.currentPosition());
   // delay(100);
 
-  // stepper1.setMaxSpeed(MAX_SPEED);
-  // stepper1.setAcceleration(ACCELERATION);
-  // stepper1.setSpeed(2000);
-  // stepper1.moveTo(endPoint1);
+  stepper1.setMaxSpeed(MAX_SPEED);
+  stepper1.setAcceleration(ACCELERATION);
+  stepper1.setSpeed(2000);
+  stepper1.moveTo(endPoint1);
 
-  // stepper2.setMaxSpeed(MAX_SPEED);
-  // stepper2.setAcceleration(ACCELERATION);
-  // stepper2.setSpeed(2000);
-  // stepper2.moveTo(endPoint2);
+  stepper2.setMaxSpeed(MAX_SPEED);
+  stepper2.setAcceleration(ACCELERATION);
+  stepper2.setSpeed(2000);
+  stepper2.moveTo(endPoint2);
 }
 
 void loop() {
@@ -232,9 +232,9 @@ void loop() {
     ignoreHourPot = false;
   } else if (!ignoreHourPot) {
     float speed = (hourPot - 512) * MAX_SPEED / 512;
-    //   // setMaxSpeed((512 - hourPot) * MAX_SPEED / 512);
-    //   // move(-100);
-    //   // runSpeed();
+      stepper1.setMaxSpeed((512 - hourPot) * MAX_SPEED / 512);
+      stepper1.move(-100);
+      stepper1.runSpeed();
     if (speed != hourSpeed) {
       hourSpeed = speed;
       Serial.print("Run hours hand at ");
@@ -252,9 +252,9 @@ void loop() {
     ignoreMinPot = false;
   } else if (!ignoreMinPot) {
     float speed = (minPot - 512) * MAX_SPEED / 512;
-    //   // setMaxSpeed((512 - hourPot) * MAX_SPEED / 512);
-    //   // move(-100);
-    //   // runSpeed();
+      stepper2.setMaxSpeed((512 - minPot) * MAX_SPEED / 512);
+      stepper2.move(-100);
+      stepper2.runSpeed();
     if (speed != minSpeed) {
       minSpeed = speed;
       Serial.print("Run minutes hand at ");
@@ -262,7 +262,7 @@ void loop() {
     }
   }
 
-  // //Change direction at the limits
+  // // //Change direction at the limits
   // if (stepper1.distanceToGo() == 0) {
   //   Serial.println(stepper1.currentPosition());
   //   stepper1.setCurrentPosition(0);

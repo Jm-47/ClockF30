@@ -34,14 +34,10 @@ module Text(letter, size, height, valign) {
 }
 
 module support(height) {
-    difference() {
         union() {
             cylinder(h = height, r = r_shaft + 2, $fn = 30);
+            cylinder(h = 5, r1 = r_shaft + 5, r2=r_shaft + 2, $fn = 30);
         }
-        union() {
-            translate([0, 0, -1]) cylinder(h = height + 2, r = r_shaft, $fn = 30);
-        }
-    }
 }
 
 module support_double(height) {
@@ -64,9 +60,9 @@ module engine_axle_plug() {
 
 
 support = true;
-gear1 = true;
-gear2 = true;
-axle = true;
+gear1 = false;
+gear2 = false;
+axle = false;
 
 show_engine_axle = false;
  
@@ -80,12 +76,30 @@ if (support) {
             translate([40 - 8, entraxe / 2, 2]) translate([0, 0, -.5]) cylinder(h = 1, r1 = 2, r2 = 0, $fn = 30);
         }
         union() {
-            translate([8, -5, -1]) cylinder(h = 4, r = r_shaft, $fn = 30);
-            translate([8, entraxe / 2, -1]) cylinder(h = 4, d = 5.1, $fn = 30);
-            translate([0, 0, -1]) cylinder(h = 4, r = r_shaft, $fn = 30);
-            translate([0, entraxe, -1]) cylinder(h = 4, r = r_shaft, $fn = 30);
-            translate([40, 0, -1]) cylinder(h = 4, r = r_shaft, $fn = 30);
-            translate([40, entraxe, -1]) cylinder(h = 4, r = r_shaft, $fn = 30);
+            translate([8, -5, -1]) cylinder(h = 4, r = 2.2, $fn = 30);
+            
+            #translate([8, entraxe / 2, -1]) cylinder(h = 4, d = 5.25, $fn = 30);
+            
+            translate([0, 0, -1]) union() {
+                cylinder(h = 50, r = 2.2, $fn = 30);
+                cylinder(h = 4, r = 4, $fn = 6);
+            }
+            
+            translate([0, entraxe, -1]) union() {
+                cylinder(h = 50, r = 2.2, $fn = 30);
+                cylinder(h = 4, r = 4, $fn = 6);
+            }
+
+            translate([40, 0, -1]) union() {
+                cylinder(h = 50, r = 2.2, $fn = 30);
+                cylinder(h = 4, r = 4, $fn = 6);
+            }
+
+            translate([40, entraxe, -1]) union() {
+                cylinder(h = 50, r = 2.2, $fn = 30);
+                cylinder(h = 4, r = 4, $fn = 6);
+            }
+
             rotate([0, 0, 90]) translate([40, 10, -1]) Text("Le Fourneau a 30 ans !", 6, 4);
         }
     }
