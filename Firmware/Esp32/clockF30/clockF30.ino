@@ -178,11 +178,19 @@ void loop() {
   if (button3 == LOW) {
     if (hourStepper.currentPosition() != 0) {
       Serial.print("Hours current position ");
-      Serial.println(hourStepper.currentPosition() * 12 / 4096);
+      Serial.print(hourStepper.currentPosition());
+      Serial.print(" ");
+      Serial.print(hourStepper.currentPosition() * 12 / 4096);
+
+      Serial.println("  - current position is now 0");
     }
     if (minStepper.currentPosition() != 0) {
       Serial.print("Minutes current position ");
-      Serial.println(minStepper.currentPosition() * 60 / 4096);
+      Serial.print(minStepper.currentPosition());
+      Serial.print(" ");
+      Serial.print(minStepper.currentPosition() * 60 / 4096);
+
+      Serial.print("  - current position is now 0");
     }
 
     hourStepper.setCurrentPosition(0);
@@ -215,25 +223,35 @@ void loop() {
       return;
     }
 
-    //if (hourPosition != time_info.tm_hour % 12) {
+    if (hourStepper.distanceToGo() == 0) {
+
       hours = time_info.tm_hour % 12;
-      Serial.print("Move hours to ");
-      Serial.println(hours);
-      hourStepper.moveTo(4096*hours/12);
-    //}
+      int destination = 4096 * hours / 12;
+      if (hourStepper.currentPosition() != destination) {
+        Serial.print("Move hours to ");
+        Serial.print(hours);
+        Serial.print(" - ");
+        Serial.println(destination);
+        hourStepper.moveTo(destination);
+        ignoreHourPot = true; // Ignore potentiometer until it is reset
+      }
+      hourStepper.run();
+    }
 
-    //if (minPosition != time_info.tm_min) {
-      minutes = time_info.tm_min;
-      Serial.print("Move minutes to ");
-      Serial.println(minutes);
-      minStepper.moveTo(4096*minutes/60);
-    //}
+    if (minStepper.distanceToGo() == 0) {
+      minutes = time_info.tm_sec; // FIXME minutes, not seconds
+      int destination = 4096 * minutes / 60;
+      if (minStepper.currentPosition() != destination) {
+        Serial.print("Move minutes to ");
+        Serial.print(minutes);
+        Serial.print(" - ");
+        Serial.println(destination);
+        minStepper.moveTo(destination);
+        ignoreMinPot = true; // Ignore potentiometer until it is reset
+      }
+      minStepper.run();
+    }
 
-    // Ignore potentiometers until they get back to 0
-    ignoreHourPot = true;
-    ignoreMinPot = true;
-    hourStepper.run();
-    minStepper.run();
     return;
   }
 
@@ -242,7 +260,10 @@ void loop() {
   if (hourPot > 512 - MARGIN && hourPot < 512 + MARGIN) {
     if (hourSpeed != 0) {
       hourSpeed = 0;
-      Serial.println("Stop hours");
+      Serial.print("Stop hours at ");
+      Serial.print(hourStepper.currentPosition());
+      Serial.print(" ");
+      Serial.println(hourStepper.currentPosition() * 12 / 4096);
     }
     hourSpeed = 0;
     ignoreHourPot = false;
@@ -267,7 +288,10 @@ void loop() {
   if (minPot > 512 - MARGIN && minPot < 512 + MARGIN) {
     if (minSpeed != 0) {
       minSpeed = 0;
-      Serial.println("Stop minutes");
+      Serial.print("Stop minutes at");
+      Serial.print(hourStepper.currentPosition());
+      Serial.print(" ");
+      Serial.println(hourStepper.currentPosition() * 12 / 4096);
     }
     minSpeed = 0;
     ignoreMinPot = false;
