@@ -32,7 +32,7 @@ const float ACCELERATION = 1000.0;
 #define MAX_POT 4096
 #define MIDDLE_POT 2048
 #define MARGIN 256
-#define SENSITIVITY 512
+#define SENSITIVITY 256
 
 #define REVOLUTION 4096
 
@@ -206,7 +206,7 @@ void loop() {
   // ------------------
   if (hourPot > MIDDLE_POT - MARGIN && hourPot < MIDDLE_POT + MARGIN) {
     if (hourSpeed != 0) {
-      Serial.print("Hours pot reset");
+      Serial.println("Hours pot reset");
       hourSpeed = 0;
     }
     ignoreHourPot = false;
