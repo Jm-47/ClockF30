@@ -31,21 +31,27 @@ const float ACCELERATION = 1000.0;
 
 #define MAX_POT 4096
 #define MIDDLE_POT 2048
-#define MARGIN 512
-#define SENSITIVITY 256
+#define MARGIN 256
+#define SENSITIVITY 512
 
 #define REVOLUTION 4096
 
 // Potentiometers
+#define ARRAY_SIZE 64
+int readingIndex = 0;
+int hourPotReading[ARRAY_SIZE];
 int hourPot = 2048;
+int minPotReading[ARRAY_SIZE];
 int minPot = 2048;
 
 boolean ignoreHourPot = false;
 boolean ignoreMinPot = false;
 
-
-int hours = 0;
-int minutes = 0;
+// Mode
+#define CLOCK 1
+#define TWO_PAST_SIX 2
+#define SPEED 3
+int mode = 0;
 
 // hand speed
 float hourSpeed = 0;
@@ -59,8 +65,6 @@ int button1 = HIGH;
 int button2 = HIGH;
 int button3 = HIGH;
 
-// Clock mode
-boolean clockMode = false;
 
 // NOTE: The sequence 1-3-2-4 is required for proper sequencing of 28BYJ-48
 AccelStepper hourStepper(AccelStepper::HALF4WIRE, motorPin11, motorPin13, motorPin12, motorPin14);
@@ -103,25 +107,199 @@ void setup() {
 
 void loop() {
   // Read potentiometers
-  int newHourPot = (analogRead(hourPotPin) / SENSITIVITY) * SENSITIVITY;
+  hourPotReading[readingIndex] = analogRead(hourPotPin);
+  int newHourPot = mean(hourPotReading) / SENSITIVITY * SENSITIVITY;
   if (newHourPot != hourPot) {
     hourPot = newHourPot;
     Serial.print("HourPot ");
     Serial.println(hourPot);
   }
 
-  int newMinPot = (analogRead(minPotPin) / SENSITIVITY) * SENSITIVITY;
+  minPotReading[readingIndex] = analogRead(minPotPin);
+  int newMinPot = mean(minPotReading) / SENSITIVITY * SENSITIVITY;
   if (newMinPot != minPot) {
     minPot = newMinPot;
     Serial.print("MinPot ");
     Serial.println(minPot);
   }
+  if (++readingIndex == ARRAY_SIZE) { readingIndex = 0; }
 
   // Read buttons
-  button1 = digitalRead(buttonPin1);
-  button2 = digitalRead(buttonPin2);
-  button3 = digitalRead(buttonPin3);
+  int status = digitalRead(buttonPin1);
+  if (button1 == HIGH && status == LOW) { Serial.println("Button 1 is low"); }
+  if (button1 == LOW && status == HIGH) { Serial.println("Button 1 is high"); }
+  button1 = status;
 
+  status = digitalRead(buttonPin2);
+  if (button2 == HIGH && status == LOW) { Serial.println("Button 2 is low"); }
+  if (button2 == LOW && status == HIGH) { Serial.println("Button 2 is high"); }
+  button2 = status;
+
+  status = digitalRead(buttonPin3);
+  if (button3 == HIGH && status == LOW) { Serial.println("Button 3 is low"); }
+  if (button3 == LOW && status == HIGH) { Serial.println("Button 3 is high"); }
+  button3 = status;
+
+  if (false) { serialBypass(); }
+
+  if (button3 == LOW) {
+    if (hourStepper.currentPosition() != 0) {
+      Serial.println("Hours current position is now 0");
+    }
+    if (minStepper.currentPosition() != 0) {
+      Serial.println("Minutes current position is now 0");
+    }
+
+    hourStepper.setCurrentPosition(0);
+    minStepper.setCurrentPosition(0);
+    return;
+  }
+
+  // -------------------------
+  // --- Two past six mode ---
+  // -------------------------
+  if (button2 == LOW || (mode == TWO_PAST_SIX && ignoreHourPot && ignoreMinPot)) {
+    if (mode != TWO_PAST_SIX) {
+      Serial.println("06:02");
+      mode = TWO_PAST_SIX;
+    }
+
+    moveHandToPosition(&hourStepper, REVOLUTION * 6 / 12);
+    moveHandToPosition(&minStepper, REVOLUTION * 2 / 60);
+
+    ignoreHourPot = true;
+    ignoreMinPot = true;
+    return;
+  }
+
+  // ------------------
+  // --- Clock mode ---
+  // ------------------
+  if (button1 == LOW || (mode == CLOCK && ignoreHourPot && ignoreMinPot)) {
+    if (!clockMode) {
+      Serial.println("Clock mode");
+      mode = CLOCK;
+    }
+
+    struct tm time_info;
+    if (!getLocalTime(&time_info)) {
+      Serial.println("Failed to obtain time");
+      return;
+    }
+
+    moveHandToPosition(&hourStepper, REVOLUTION * (time_info.tm_hour % 12) / 12);
+    moveHandToPosition(&minStepper, REVOLUTION * time_info.tm_sec / 60);
+
+    ignoreHourPot = true;
+    ignoreMinPot = true;
+    return;
+  }
+
+  // ------------------
+  // --- Speed mode ---
+  // ------------------
+  if (hourPot > MIDDLE_POT - MARGIN && hourPot < MIDDLE_POT + MARGIN) {
+    if (hourSpeed != 0) {
+      hourSpeed = 0;
+      Serial.print("Stop hours at ");
+      Serial.print(hourStepper.currentPosition());
+      Serial.print(" ");
+      Serial.println(hourStepper.currentPosition() * 12 / REVOLUTION);
+    }
+    hourSpeed = 0;
+    ignoreHourPot = false;
+  } else if (ignoreHourPot) {
+    if (hourSpeed != 0) {
+      Serial.print("Ignore hour pot");
+      hourSpeed = 0;
+    }
+  }
+  else {
+    if (mode != speed) {
+      Serial.println("Stop clock mode");
+      mode = SPEED;
+    }
+    float speed = MAX_SPEED * (hourPot - MIDDLE_POT - MARGIN) / (MIDDLE_POT - MARGIN);
+    hourStepper.setSpeed(speed);
+    if (hourPot > MIDDLE_POT) {
+      hourStepper.move(1000);
+    }
+    else {
+      hourStepper.move(-1000);
+    }
+    hourStepper.runSpeed();
+    if (speed != hourSpeed) {
+      hourSpeed = speed;
+      Serial.print("Run hours hand at ");
+      Serial.println(hourSpeed);
+    }
+  }
+
+  // Control direction and speed
+  if (minPot > MIDDLE_POT - MARGIN && minPot < MIDDLE_POT + MARGIN) {
+    if (minSpeed != 0) {
+      minSpeed = 0;
+      Serial.print("Stop minutes at");
+      Serial.print(minStepper.currentPosition());
+      Serial.print(" ");
+      Serial.println(minStepper.currentPosition() * 12 / REVOLUTION);
+    }
+    minSpeed = 0;
+    ignoreMinPot = false;
+  } else if (ignoreMinPot) {
+    if (minSpeed != 0) {
+      minSpeed = 0;
+      Serial.print("Ignore min pot");
+    }
+  } else {
+    if (mode != speed) {
+      Serial.println("Stop clock mode");
+      mode = SPEED;
+    }
+    float speed = MAX_SPEED * (minPot - MIDDLE_POT - MARGIN) / MIDDLE_POT;
+      minStepper.setSpeed(speed);
+      if (minPot > MIDDLE_POT) {
+        minStepper.move(1000);
+      }
+      else {
+        minStepper.move(-1000);
+      }
+      minStepper.runSpeed();
+    if (speed != minSpeed) {
+      minSpeed = speed;
+      Serial.print("Run minutes hand at ");
+      Serial.println(minSpeed);
+    }
+  }
+}
+
+void moveHandToPosition(AccelStepper *stepper, int destination) {
+    if (stepper->distanceToGo() == 0) {
+
+      int currentPosition = stepper->currentPosition() % REVOLUTION;
+
+      if (currentPosition != destination) {
+
+        if (destination - currentPosition > REVOLUTION / 2) {
+          stepper->setCurrentPosition(currentPosition + REVOLUTION);
+        }
+        else if (destination - currentPosition < -REVOLUTION / 2 + 1) {
+          stepper->setCurrentPosition(currentPosition - REVOLUTION);
+        }
+
+        stepper->moveTo(destination);
+      }
+    }
+    stepper->run();
+}
+
+int mean(int array[]) {
+  int sum = 0;
+  for (int i = 0; i < ARRAY_SIZE; i++) { sum = sum + array[i]; }
+  return sum / ARRAY_SIZE;
+}
+
+void serialBypass() {
   // serial bypass
   if (Serial.available() > 0) {
     int thisChar = Serial.read();
@@ -183,149 +361,4 @@ void loop() {
         break;
     }
   }
-
-  if (button3 == LOW) {
-    Serial.println("Button 3 is low");
-
-    clockMode = false;
-    if (hourStepper.currentPosition() != 0) {
-      Serial.print("Hours current position ");
-      Serial.print(hourStepper.currentPosition());
-      Serial.print(" ");
-      Serial.print(hourStepper.currentPosition() * 12 / REVOLUTION);
-
-      Serial.println("  - current position is now 0");
-    }
-    if (minStepper.currentPosition() != 0) {
-      Serial.print("Minutes current position ");
-      Serial.print(minStepper.currentPosition());
-      Serial.print(" ");
-      Serial.print(minStepper.currentPosition() * 60 / REVOLUTION);
-
-      Serial.print("  - current position is now 0");
-    }
-
-    hourStepper.setCurrentPosition(0);
-    minStepper.setCurrentPosition(0);
-    return;
-  }
-
-  if (button2 == LOW) {
-    Serial.println("Button 2 is low");
-
-    moveHandToPosition(&hourStepper, REVOLUTION * 6 / 12);
-    moveHandToPosition(&minStepper, REVOLUTION * 2 / 60);
-
-    clockMode = false;
-    ignoreHourPot = true;
-    ignoreMinPot = true;
-    return;
-  }
-
-  if (button1 == LOW) {
-    Serial.println("Button 1 is low");
-  }
-
-  if (button1 == LOW || (clockMode && ignoreHourPot && ignoreMinPot)) {
-    struct tm time_info;
-    if (!getLocalTime(&time_info)) {
-      Serial.println("Failed to obtain time");
-      return;
-    }
-
-    moveHandToPosition(&hourStepper, REVOLUTION * (time_info.tm_hour % 12) / 12);
-    moveHandToPosition(&minStepper, REVOLUTION * time_info.tm_sec / 60);
-
-    clockMode = true;
-    ignoreHourPot = true;
-    ignoreMinPot = true;
-    return;
-  }
-
-  // Control direction and speed
-  if (hourPot > MIDDLE_POT - MARGIN && hourPot < MIDDLE_POT + MARGIN) {
-    if (hourSpeed != 0) {
-      hourSpeed = 0;
-      Serial.print("Stop hours at ");
-      Serial.print(hourStepper.currentPosition());
-      Serial.print(" ");
-      Serial.println(hourStepper.currentPosition() * 12 / REVOLUTION);
-    }
-    hourSpeed = 0;
-    ignoreHourPot = false;
-  } else if (ignoreHourPot) {
-    if (hourSpeed != 0) {
-      Serial.print("Ignore hour pot");
-      hourSpeed = 0;
-    }
-  }
-  else {
-    float speed = MAX_SPEED * (hourPot - MIDDLE_POT - MARGIN) / (MIDDLE_POT - MARGIN);
-    hourStepper.setSpeed(speed);
-    if (hourPot > MIDDLE_POT) {
-      hourStepper.move(1000);
-    }
-    else {
-      hourStepper.move(-1000);
-    }
-    hourStepper.runSpeed();
-    if (speed != hourSpeed) {
-      hourSpeed = speed;
-      Serial.print("Run hours hand at ");
-      Serial.println(hourSpeed);
-    }
-  }
-
-  // Control direction and speed
-  if (minPot > MIDDLE_POT - MARGIN && minPot < MIDDLE_POT + MARGIN) {
-    if (minSpeed != 0) {
-      minSpeed = 0;
-      Serial.print("Stop minutes at");
-      Serial.print(minStepper.currentPosition());
-      Serial.print(" ");
-      Serial.println(minStepper.currentPosition() * 12 / REVOLUTION);
-    }
-    minSpeed = 0;
-    ignoreMinPot = false;
-  } else if (ignoreMinPot) {
-    if (minSpeed != 0) {
-      minSpeed = 0;
-      Serial.print("Ignore min pot");
-    }
-  } else {
-    float speed = MAX_SPEED * (minPot - MIDDLE_POT - MARGIN) / MIDDLE_POT;
-      minStepper.setSpeed(speed);
-      if (minPot > MIDDLE_POT) {
-        minStepper.move(1000);
-      }
-      else {
-        minStepper.move(-1000);
-      }
-      minStepper.runSpeed();
-    if (speed != minSpeed) {
-      minSpeed = speed;
-      Serial.print("Run minutes hand at ");
-      Serial.println(minSpeed);
-    }
-  }
-}
-
-void moveHandToPosition(AccelStepper *stepper, int destination) {
-    if (stepper->distanceToGo() == 0) {
-
-      int currentPosition = stepper->currentPosition() % REVOLUTION;
-
-      if (currentPosition != destination) {
-
-        if (destination - currentPosition > REVOLUTION / 2) {
-          stepper->setCurrentPosition(currentPosition + REVOLUTION);
-        }
-        else if (destination - currentPosition < -REVOLUTION / 2 + 1) {
-          stepper->setCurrentPosition(currentPosition - REVOLUTION);
-        }
-
-        stepper->moveTo(destination);
-      }
-    }
-    stepper->run();
 }
