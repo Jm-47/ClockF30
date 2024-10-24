@@ -3,7 +3,7 @@
 #include <time.h>
 
 
-// WiFi credentials
+// WiFi credentials FIXME
 const char* ssid = "iPhone";
 const char* password = " nonomomo";
 
@@ -12,7 +12,7 @@ const char* ntpServer = "europe.pool.ntp.org";
 const long gmtOffset_sec = 3600;
 const int daylightOffset_sec = 3600;
 
-const float MAX_SPEED = 1200.0;
+const float MAX_SPEED = 1000.0;
 const float ACCELERATION = 1000.0;
 
 
@@ -121,7 +121,7 @@ void loop() {
       Serial.println(hourPot);
     }
 
-    minPotReading[readingIndex] = analogRead(minPotPin);
+    minPotReading[readingIndex] = 2048; // FIXME analogRead(minPotPin);
     int newMinPot = mean(minPotReading) / SENSITIVITY * SENSITIVITY;
     if (newMinPot != minPot) {
       minPot = newMinPot;
@@ -132,6 +132,7 @@ void loop() {
     lastReadingMillis = currentMillis;
     if (++readingIndex == ARRAY_SIZE) { readingIndex = 0; }
   }
+
   // Read buttons
   int status = digitalRead(buttonPin1);
   if (button1 == HIGH && status == LOW) { Serial.println("Button 1 is low"); }
@@ -180,7 +181,7 @@ void loop() {
     }
     else {
       moveHandToPosition(&hourStepper, REVOLUTION * (time_info.tm_hour % 12) / 12);
-      moveHandToPosition(&minStepper, REVOLUTION * time_info.tm_sec / 60);
+      moveHandToPosition(&minStepper, REVOLUTION * time_info.tm_sec / 60); // FIXME
     }
   }
 
@@ -208,11 +209,7 @@ void loop() {
       Serial.print("Hours pot reset");
       hourSpeed = 0;
     }
-
     ignoreHourPot = false;
-
-    //FIXME: remove when minpot is plugged
-    ignoreMinPot = false;
   } else if (ignoreHourPot) {
     // Ignore
   } else {
