@@ -176,7 +176,7 @@ void loop() {
   // --- Clock mode ---
   // ------------------
   if (button1 == LOW || (mode == CLOCK && ignoreHourPot && ignoreMinPot)) {
-    if (!clockMode) {
+    if (mode != CLOCK) {
       Serial.println("Clock mode");
       mode = CLOCK;
     }
@@ -215,7 +215,7 @@ void loop() {
     }
   }
   else {
-    if (mode != speed) {
+    if (mode != SPEED) {
       Serial.println("Stop clock mode");
       mode = SPEED;
     }
@@ -252,7 +252,7 @@ void loop() {
       Serial.print("Ignore min pot");
     }
   } else {
-    if (mode != speed) {
+    if (mode != SPEED) {
       Serial.println("Stop clock mode");
       mode = SPEED;
     }
