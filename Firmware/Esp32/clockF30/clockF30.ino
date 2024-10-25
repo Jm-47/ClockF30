@@ -12,7 +12,7 @@ const char* ntpServer = "europe.pool.ntp.org";
 const long gmtOffset_sec = 3600;
 const int daylightOffset_sec = 3600;
 
-const float MAX_SPEED = 1000.0;
+const float MAX_SPEED = 1200.0;
 const float ACCELERATION = 1000.0;
 
 
@@ -31,7 +31,6 @@ const float ACCELERATION = 1000.0;
 
 #define MAX_POT 4096
 #define MIDDLE_POT 2048
-#define MARGIN 256
 #define SENSITIVITY 256
 
 #define REVOLUTION 4096
@@ -164,7 +163,7 @@ void loop() {
     ignoreHourPot = true;
     ignoreMinPot = true;
   }
-  else if (button3 == LOW && mode != CALIBRATION) {
+  else if (button3 == LOW && (button1 == LOW ||button2 == LOW) && mode != CALIBRATION) {
     Serial.println("Calibration");
     mode = CALIBRATION;
     ignoreHourPot = true;
@@ -204,7 +203,7 @@ void loop() {
   // ------------------
   // --- Speed mode ---
   // ------------------
-  if (hourPot > MIDDLE_POT - MARGIN && hourPot < MIDDLE_POT + MARGIN) {
+  if (hourPot == MIDDLE_POT) {
     if (hourSpeed != 0) {
       Serial.println("Hours pot reset");
       hourSpeed = 0;
@@ -234,7 +233,7 @@ void loop() {
   }
 
   // Control direction and speed
-  if (minPot > MIDDLE_POT - MARGIN && minPot < MIDDLE_POT + MARGIN) {
+  if (minPot == MIDDLE_POT) {
     if (minSpeed != 0) {
       Serial.println("Minutes pot reset");
       minSpeed = 0;
