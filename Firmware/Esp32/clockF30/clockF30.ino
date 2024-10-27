@@ -12,7 +12,7 @@ const char* ntpServer = "europe.pool.ntp.org";
 const long gmtOffset_sec = 3600;
 const int daylightOffset_sec = 3600;
 
-const float MAX_SPEED = 1200.0;
+const float MAX_SPEED = 1500.0;
 const float ACCELERATION = 1000.0;
 
 
@@ -28,6 +28,13 @@ const float ACCELERATION = 1000.0;
 
 #define hourPotPin 34
 #define minPotPin 35
+
+#define buttonPin1 12
+#define buttonPin2 13
+#define buttonPin3 14
+
+#define HOUR_DIRECTION -1
+#define MIN_DIRECTION -1
 
 #define MAX_POT 4096
 #define MIDDLE_POT 2048
@@ -61,13 +68,9 @@ float hourSpeed = 0;
 float minSpeed = 0;
 
 // Buttons
-int buttonPin1 = 12;
-int buttonPin2 = 13;
-int buttonPin3 = 14;
 int button1 = HIGH;
 int button2 = HIGH;
 int button3 = HIGH;
-
 
 // NOTE: The sequence 1-3-2-4 is required for proper sequencing of 28BYJ-48
 AccelStepper hourStepper(AccelStepper::HALF4WIRE, motorPin11, motorPin13, motorPin12, motorPin14);
@@ -83,7 +86,6 @@ void setup() {
   pinMode(buttonPin1, INPUT_PULLUP);
   pinMode(buttonPin2, INPUT_PULLUP);
   pinMode(buttonPin3, INPUT_PULLUP);
-
   pinMode(hourPotPin, INPUT);
   pinMode(minPotPin, INPUT);
 
@@ -97,7 +99,16 @@ void setup() {
   Serial.println("WiFi connected");
 
   // Init and get the time
+  Serial.println("Setting Timezone to CET-1CEST,M3.5.0,M10.5.0/3");
+  setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+  tzset();
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+  struct tm time_info;
+  if (!getLocalTime(&time_info)) {
+    Serial.println("Failed to obtain time");
+  }
+  Serial.println(&time_info, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
 
   hourStepper.setSpeed(MAX_SPEED);
   hourStepper.setMaxSpeed(MAX_SPEED);
@@ -106,6 +117,9 @@ void setup() {
   minStepper.setSpeed(MAX_SPEED);
   minStepper.setMaxSpeed(MAX_SPEED);
   minStepper.setAcceleration(ACCELERATION);
+
+  ignoreHourPot = true;
+  ignoreMinPot = true;
 }
 
 void loop() {
@@ -120,7 +134,7 @@ void loop() {
       Serial.println(hourPot);
     }
 
-    minPotReading[readingIndex] = 2048; // FIXME analogRead(minPotPin);
+    minPotReading[readingIndex] = analogRead(minPotPin);
     int newMinPot = mean(minPotReading) / SENSITIVITY * SENSITIVITY;
     if (newMinPot != minPot) {
       minPot = newMinPot;
@@ -148,16 +162,13 @@ void loop() {
   if (button3 == LOW && status == HIGH) { Serial.println("Button 3 is high"); }
   button3 = status;
 
-  // Don't read serial input
-  if (false) { serialBypass(); }
-
-  if (button1 == LOW && mode != CLOCK) {
+  if (button1 == LOW && button3 == HIGH && mode != CLOCK) {
     Serial.println("Clock mode");
     mode = CLOCK;
     ignoreHourPot = true;
     ignoreMinPot = true;
   }
-  else if (button2 == LOW && mode != TWO_PAST_SIX) {
+  else if (button2 == LOW && button3 == HIGH && mode != TWO_PAST_SIX) {
     Serial.println("06:02");
     mode = TWO_PAST_SIX;
     ignoreHourPot = true;
@@ -179,8 +190,11 @@ void loop() {
       Serial.println("Failed to obtain time");
     }
     else {
-      moveHandToPosition(&hourStepper, REVOLUTION * (time_info.tm_hour % 12) / 12);
-      moveHandToPosition(&minStepper, REVOLUTION * time_info.tm_sec / 60); // FIXME
+      moveHandToPosition(&hourStepper, HOUR_DIRECTION * ((REVOLUTION * (time_info.tm_hour % 12)) / 12 +
+                                                         (REVOLUTION * time_info.tm_min) / 720));
+      // moveHandToPosition(&minStepper, MIN_DIRECTION * REVOLUTION * time_info.tm_sec / 60); // seconds
+      moveHandToPosition(&minStepper, MIN_DIRECTION * ((REVOLUTION * time_info.tm_min) / 60 +
+                                                       (REVOLUTION * time_info.tm_sec) / 3600)); // FIXME
     }
   }
 
@@ -219,10 +233,10 @@ void loop() {
     float speed = MAX_SPEED * (hourPot - MIDDLE_POT) / MIDDLE_POT;
     hourStepper.setSpeed(speed);
     if (hourPot > MIDDLE_POT) {
-      hourStepper.move(1000);
+      hourStepper.move(100 * HOUR_DIRECTION);
     }
     else {
-      hourStepper.move(-1000);
+      hourStepper.move(-100 * HOUR_DIRECTION);
     }
     hourStepper.runSpeed();
     if (speed != hourSpeed) {
@@ -249,10 +263,10 @@ void loop() {
     float speed = MAX_SPEED * (minPot - MIDDLE_POT) / MIDDLE_POT;
       minStepper.setSpeed(speed);
       if (minPot > MIDDLE_POT) {
-        minStepper.move(1000);
+        minStepper.move(100 * MIN_DIRECTION);
       }
       else {
-        minStepper.move(-1000);
+        minStepper.move(-100 * MIN_DIRECTION);
       }
       minStepper.runSpeed();
     if (speed != minSpeed) {
@@ -266,17 +280,22 @@ void loop() {
 void moveHandToPosition(AccelStepper *stepper, int destination) {
     if (stepper->distanceToGo() == 0) {
 
-      int currentPosition = stepper->currentPosition() % REVOLUTION;
+      long currentPosition = stepper->currentPosition();
+
+      currentPosition = currentPosition % REVOLUTION;
+      stepper->setCurrentPosition(currentPosition);
 
       if (currentPosition != destination) {
+        Serial.print("Current position ");
+        Serial.print(currentPosition);
+        Serial.print(" move to  ");
+        Serial.println(destination);
 
         if (destination - currentPosition > REVOLUTION / 2) {
           stepper->setCurrentPosition(currentPosition + REVOLUTION);
-        }
-        else if (destination - currentPosition < -REVOLUTION / 2 + 1) {
+        } else if (destination - currentPosition < -REVOLUTION / 2 + 1) {
           stepper->setCurrentPosition(currentPosition - REVOLUTION);
         }
-
         stepper->moveTo(destination);
       }
     }
@@ -287,68 +306,4 @@ int mean(int array[]) {
   int sum = 0;
   for (int i = 0; i < ARRAY_SIZE; i++) { sum = sum + array[i]; }
   return sum / ARRAY_SIZE;
-}
-
-void serialBypass() {
-  // serial bypass
-  if (Serial.available() > 0) {
-    int thisChar = Serial.read();
-    // Serial.print("Command ");
-    // Serial.println(thisChar);
-
-    switch (thisChar) {
-      case 49:  //1
-        hourPot = 0;
-        break;
-      case 50:  //2
-        hourPot = 1024;
-        break;
-      case 51:  //3
-        hourPot = 2048;
-        break;
-      case 52:  //4
-        hourPot = 3072;
-        break;
-      case 53:  //5
-        hourPot = 4096;
-        break;
-
-      case 54:  //6
-        minPot = 0;
-        break;
-      case 55:  //7
-        minPot = 1024;
-        break;
-      case 56:  //8
-        minPot = 2048;
-        break;
-      case 57:  //9
-        minPot = 3072;
-        break;
-      case 48:  //0
-        minPot = 4096;
-        break;
-
-      case 113:  //q
-        button1 = LOW;
-        break;
-      case 119:  //w
-        button1 = HIGH;
-        break;
-
-      case 97:  //a
-        button2 = LOW;
-        break;
-      case 115:  //s
-        button2 = HIGH;
-        break;
-
-      case 122:  //z
-        button3 = LOW;
-        break;
-      case 120:  //x
-        button3 = HIGH;
-        break;
-    }
-  }
 }
