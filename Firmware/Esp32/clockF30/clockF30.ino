@@ -4,17 +4,12 @@
 
 
 // WiFi credentials FIXME
-const char* ssid = "iPhone";
-const char* password = " nonomomo";
+#define SSID "iPhone"
+#define PASSWORD  " nonomomo"
 
 // NTP Server
-const char* ntpServer = "europe.pool.ntp.org";
-const long gmtOffset_sec = 3600;
-const int daylightOffset_sec = 3600;
-
-const float MAX_SPEED = 1500.0;
-const float ACCELERATION = 1000.0;
-
+#define NTP_SERVER "pool.ntp.org"
+#define EUROPE_PARIS "CET-1CEST,M3.5.0/02,M10.5.0/03"
 
 #define motorPin11 32  // IN1 on ULN2003 ==> Blue   on 28BYJ-48
 #define motorPin12 33  // IN2 on ULN2004 ==> Pink   on 28BYJ-48
@@ -42,13 +37,17 @@ const float ACCELERATION = 1000.0;
 
 #define REVOLUTION 4096
 
+#define MAX_SPEED 1500.0
+#define ACCELERATION 1000.0
+
+
 // Potentiometers
 #define ARRAY_SIZE 8
 int readingIndex = 0;
 int hourPotReading[ARRAY_SIZE];
-int hourPot = 2048;
+int hourPot = 0;
 int minPotReading[ARRAY_SIZE];
-int minPot = 2048;
+int minPot = 0;
 
 unsigned long lastReadingMillis;
 #define READING_INTERVAL 20
@@ -91,18 +90,15 @@ void setup() {
 
   // Connect to WiFi
   Serial.println("Connecting to WiFi");
-  WiFi.begin(ssid, password);
+  WiFi.begin(SSID, PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println("WiFi connected");
 
-  // Init and get the time
-  Serial.println("Setting Timezone to CET-1CEST,M3.5.0,M10.5.0/3");
-  setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
-  tzset();
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  configTzTime(EUROPE_PARIS, NTP_SERVER);
+
 
   struct tm time_info;
   if (!getLocalTime(&time_info)) {
@@ -202,8 +198,8 @@ void loop() {
   // --- Two past six mode ---
   // -------------------------
   if (mode == TWO_PAST_SIX) {
-    moveHandToPosition(&hourStepper, REVOLUTION * 6 / 12);
-    moveHandToPosition(&minStepper, REVOLUTION * 2 / 60);
+    moveHandToPosition(&hourStepper, HOUR_DIRECTION * REVOLUTION * 6 / 12);
+    moveHandToPosition(&minStepper, MIN_DIRECTION * REVOLUTION * 2 / 60);
   }
 
   // ------------------------
