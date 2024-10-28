@@ -76,10 +76,10 @@ AccelStepper hourStepper(AccelStepper::HALF4WIRE, motorPin11, motorPin13, motorP
 AccelStepper minStepper(AccelStepper::HALF4WIRE, motorPin21, motorPin23, motorPin22, motorPin24);
 
 void setup() {
-  Serial.begin(9600);
-  while (!Serial) {
-    ;  // wait for serial port to connect. Needed for native USB port only
-  }
+   Serial.begin(9600);
+   while (!Serial) {
+     ;  // wait for serial port to connect. Needed for native USB port only
+   }
 
   // // init buttons
   pinMode(buttonPin1, INPUT_PULLUP);
@@ -98,8 +98,6 @@ void setup() {
   Serial.println("WiFi connected");
 
   configTzTime(EUROPE_PARIS, NTP_SERVER);
-
-
   struct tm time_info;
   if (!getLocalTime(&time_info)) {
     Serial.println("Failed to obtain time");
@@ -227,19 +225,18 @@ void loop() {
       mode = SPEED;
     }
     float speed = MAX_SPEED * (hourPot - MIDDLE_POT) / MIDDLE_POT;
-    hourStepper.setSpeed(speed);
-    if (hourPot > MIDDLE_POT) {
-      hourStepper.move(100 * HOUR_DIRECTION);
-    }
-    else {
-      hourStepper.move(-100 * HOUR_DIRECTION);
-    }
-    hourStepper.runSpeed();
     if (speed != hourSpeed) {
       hourSpeed = speed;
       Serial.print("Run hours hand at ");
       Serial.println(hourSpeed);
+      }
+    hourStepper.setSpeed(speed);
+    if (hourSpeed > 0) {
+      hourStepper.move(HOUR_DIRECTION * 1000);
+    } else {
+      hourStepper.move(-1 * HOUR_DIRECTION * 1000);
     }
+    hourStepper.runSpeed();
   }
 
   // Control direction and speed
@@ -257,19 +254,18 @@ void loop() {
       mode = SPEED;
     }
     float speed = MAX_SPEED * (minPot - MIDDLE_POT) / MIDDLE_POT;
-      minStepper.setSpeed(speed);
-      if (minPot > MIDDLE_POT) {
-        minStepper.move(100 * MIN_DIRECTION);
-      }
-      else {
-        minStepper.move(-100 * MIN_DIRECTION);
-      }
-      minStepper.runSpeed();
     if (speed != minSpeed) {
       minSpeed = speed;
       Serial.print("Run minutes hand at ");
       Serial.println(minSpeed);
     }
+    minStepper.setSpeed(speed);
+    if (minSpeed > 0) {
+      minStepper.move(MIN_DIRECTION * 1000);
+    } else {
+      minStepper.move(-1 * MIN_DIRECTION * 1000);
+    }
+    minStepper.runSpeed();
   }
 }
 
