@@ -4,8 +4,8 @@
 
 
 // WiFi credentials
-#define SSID "wififourneau"
-#define PASSWORD "capucins2020"
+const char* ssid = "wififourneau";
+const char* password = "capucins2020";
 
 // NTP Server
 #define NTP_SERVER "pool.ntp.org"
@@ -27,9 +27,6 @@
 #define buttonPin1 12
 #define buttonPin2 13
 #define buttonPin3 14
-
-#define HOUR_DIRECTION -1
-#define MIN_DIRECTION -1
 
 #define MAX_POT 4096
 #define MIDDLE_POT 2048
@@ -76,10 +73,10 @@ AccelStepper hourStepper(AccelStepper::HALF4WIRE, motorPin11, motorPin13, motorP
 AccelStepper minStepper(AccelStepper::HALF4WIRE, motorPin21, motorPin23, motorPin22, motorPin24);
 
 void setup() {
-   Serial.begin(9600);
-   while (!Serial) {
-     ;  // wait for serial port to connect. Needed for native USB port only
-   }
+  Serial.begin(9600);
+  while (!Serial) {
+    ;  // wait for serial port to connect. Needed for native USB port only
+  }
   Serial.println("Serial connected");
 
   // // init buttons
@@ -91,7 +88,7 @@ void setup() {
 
   // Connect to WiFi
   Serial.println("Connecting to WiFi");
-  WiFi.begin(SSID, PASSWORD);
+  WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -185,13 +182,11 @@ void loop() {
       Serial.println("Failed to obtain time");
     }
     else {
-      Serial.println(&time_info, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-
-      moveHandToPosition(&hourStepper, HOUR_DIRECTION * ((REVOLUTION * (time_info.tm_hour % 12)) / 12 +
-                                                         (REVOLUTION * time_info.tm_min) / 720));
-      // moveHandToPosition(&minStepper, MIN_DIRECTION * REVOLUTION * time_info.tm_sec / 60); // seconds
-      moveHandToPosition(&minStepper, MIN_DIRECTION * ((REVOLUTION * time_info.tm_min) / 60 +
-                                                       (REVOLUTION * time_info.tm_sec) / 3600));
+      moveHandToPosition(&hourStepper, ((REVOLUTION * (time_info.tm_hour % 12)) / 12 +
+                                        (REVOLUTION * time_info.tm_min) / 720));
+      // moveHandToPosition(&minStepper, REVOLUTION * time_info.tm_sec / 60); // seconds
+      moveHandToPosition(&minStepper, ((REVOLUTION * time_info.tm_min) / 60 +
+                                       (REVOLUTION * time_info.tm_sec) / 3600));
     }
   }
 
@@ -199,8 +194,8 @@ void loop() {
   // --- Two past six mode ---
   // -------------------------
   if (mode == TWO_PAST_SIX) {
-    moveHandToPosition(&hourStepper, HOUR_DIRECTION * REVOLUTION * 6 / 12);
-    moveHandToPosition(&minStepper, MIN_DIRECTION * REVOLUTION * 2 / 60);
+    moveHandToPosition(&hourStepper, REVOLUTION * 6 / 12);
+    moveHandToPosition(&minStepper, REVOLUTION * 2 / 60);
   }
 
   // ------------------------
@@ -235,9 +230,9 @@ void loop() {
       }
     hourStepper.setSpeed(speed);
     if (hourSpeed > 0) {
-      hourStepper.move(HOUR_DIRECTION * 1000);
+      hourStepper.move(-1000);
     } else {
-      hourStepper.move(-1 * HOUR_DIRECTION * 1000);
+      hourStepper.move(1000);
     }
     hourStepper.runSpeed();
   }
@@ -264,9 +259,9 @@ void loop() {
     }
     minStepper.setSpeed(speed);
     if (minSpeed > 0) {
-      minStepper.move(MIN_DIRECTION * 1000);
+      minStepper.move(-1000);
     } else {
-      minStepper.move(-1 * MIN_DIRECTION * 1000);
+      minStepper.move(1000);
     }
     minStepper.runSpeed();
   }
