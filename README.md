@@ -10,3 +10,27 @@ https://cdn.shopify.com/s/files/1/1509/1638/files/ESP-32_NodeMCU_Developmentboar
 
 ## Stepper motor
 https://www.digikey.fr/fr/htmldatasheets/production/1839399/0/0/1/28byj-48
+
+## Manuel utilisateur
+
+- Se connecte à `wififourneau` au démarrage. 
+
+### Calibration
+
+- Positionner les aiguilles sur 12 avec les deux potentiomètres
+- Maintenir le bouton de gauche appuyé et en même temps appuyer l'un des deux autres.
+
+### Mode horloge
+
+- Bouton du milieu
+
+### Mode 6:02
+
+- Bouton de droite
+
+### Mode libre
+
+- Tourner les potentiomètres.
+
+Quand on passe en mode horloge ou 6:02, les potentiomètres sont désactivés. Ils se réactivent quand ils repassent par la position neutre. 
+
