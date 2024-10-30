@@ -3,9 +3,9 @@
 #include <time.h>
 
 
-// WiFi credentials FIXME
-#define SSID "iPhone"
-#define PASSWORD  " nonomomo"
+// WiFi credentials
+#define SSID "wififourneau"
+#define PASSWORD "capucins2020"
 
 // NTP Server
 #define NTP_SERVER "pool.ntp.org"
@@ -80,6 +80,7 @@ void setup() {
    while (!Serial) {
      ;  // wait for serial port to connect. Needed for native USB port only
    }
+  Serial.println("Serial connected");
 
   // // init buttons
   pinMode(buttonPin1, INPUT_PULLUP);
@@ -184,11 +185,13 @@ void loop() {
       Serial.println("Failed to obtain time");
     }
     else {
+      Serial.println(&time_info, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+
       moveHandToPosition(&hourStepper, HOUR_DIRECTION * ((REVOLUTION * (time_info.tm_hour % 12)) / 12 +
                                                          (REVOLUTION * time_info.tm_min) / 720));
       // moveHandToPosition(&minStepper, MIN_DIRECTION * REVOLUTION * time_info.tm_sec / 60); // seconds
       moveHandToPosition(&minStepper, MIN_DIRECTION * ((REVOLUTION * time_info.tm_min) / 60 +
-                                                       (REVOLUTION * time_info.tm_sec) / 3600)); // FIXME
+                                                       (REVOLUTION * time_info.tm_sec) / 3600));
     }
   }
 
