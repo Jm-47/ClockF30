@@ -209,7 +209,7 @@ void loop() {
   // ------------------
   // --- Speed mode ---
   // ------------------
-  if (hourPot == MIDDLE_POT) {
+  if (hourPot <= MIDDLE_POT) {
     if (hourSpeed != 0) {
       Serial.println("Hours pot reset");
       hourSpeed = 0;
@@ -278,14 +278,17 @@ void moveHandToPosition(AccelStepper *stepper, int destination) {
       if (currentPosition != destination) {
         Serial.print("Current position ");
         Serial.print(currentPosition);
+
+        if (destination < currentPosition) {
+          stepper->setCurrentPosition(currentPosition - REVOLUTION);
+
+          Serial.print(" new current position ");
+          Serial.print(currentPosition - REVOLUTION);
+        }
+
         Serial.print(" move to  ");
         Serial.println(destination);
 
-        if (destination - currentPosition > REVOLUTION / 2) {
-          stepper->setCurrentPosition(currentPosition + REVOLUTION);
-        } else if (destination - currentPosition < -REVOLUTION / 2 + 1) {
-          stepper->setCurrentPosition(currentPosition - REVOLUTION);
-        }
         stepper->moveTo(destination);
       }
     }
