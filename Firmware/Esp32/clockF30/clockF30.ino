@@ -11,15 +11,15 @@ const char* password = "capucins2020";
 #define NTP_SERVER "pool.ntp.org"
 #define EUROPE_PARIS "CET-1CEST,M3.5.0/02,M10.5.0/03"
 
-#define motorPin11 32  // IN1 on ULN2003 ==> Blue   on 28BYJ-48
-#define motorPin12 33  // IN2 on ULN2004 ==> Pink   on 28BYJ-48
-#define motorPin13 25  // IN3 on ULN2003 ==> Yellow on 28BYJ-48
-#define motorPin14 26  // IN4 on ULN2003 ==> Orange on 28BYJ-48
+#define motorPin21 32  // IN1 on ULN2003 ==> Blue   on 28BYJ-48
+#define motorPin22 33  // IN2 on ULN2004 ==> Pink   on 28BYJ-48
+#define motorPin23 25  // IN3 on ULN2003 ==> Yellow on 28BYJ-48
+#define motorPin24 26  // IN4 on ULN2003 ==> Orange on 28BYJ-48
 
-#define motorPin21 5   // IN1 on ULN2003 ==> Blue   on 28BYJ-48
-#define motorPin22 18  // IN2 on ULN2004 ==> Pink   on 28BYJ-48
-#define motorPin23 19  // IN3 on ULN2003 ==> Yellow on 28BYJ-48
-#define motorPin24 21  // IN4 on ULN2003 ==> Orange on 28BYJ-48
+#define motorPin11 5   // IN1 on ULN2003 ==> Blue   on 28BYJ-48
+#define motorPin12 18  // IN2 on ULN2004 ==> Pink   on 28BYJ-48
+#define motorPin13 19  // IN3 on ULN2003 ==> Yellow on 28BYJ-48
+#define motorPin14 21  // IN4 on ULN2003 ==> Orange on 28BYJ-48
 
 #define hourPotPin 34
 #define minPotPin 35
@@ -34,8 +34,8 @@ const char* password = "capucins2020";
 
 #define REVOLUTION 4096
 
-#define MAX_SPEED 1500.0
-#define ACCELERATION 1000.0
+#define MAX_SPEED 800.0
+#define ACCELERATION 500.0
 
 
 // Potentiometers
@@ -230,9 +230,9 @@ void loop() {
       }
     hourStepper.setSpeed(speed);
     if (hourSpeed > 0) {
-      hourStepper.move(-1000);
-    } else {
       hourStepper.move(1000);
+    } else {
+      hourStepper.move(-1000);
     }
     hourStepper.runSpeed();
   }
@@ -259,9 +259,9 @@ void loop() {
     }
     minStepper.setSpeed(speed);
     if (minSpeed > 0) {
-      minStepper.move(-1000);
-    } else {
       minStepper.move(1000);
+    } else {
+      minStepper.move(-1000);
     }
     minStepper.runSpeed();
   }
